@@ -3512,6 +3512,123 @@ Agent 内置 Memory（短期） + MCP Memory Server（长期知识图谱）
 
 ---
 
+### Q30: MCP Security 现状如何？2026年为什么企业级 MCP 部署必须解决安全问题？OWASP MCP Top 10 之外有哪些关键风险？
+
+<details>
+<summary>💡 答案要点</summary>
+
+**MCP 安全现状（2026年3月数据）：**
+
+| 数据 | 值 | 说明 |
+|------|-----|------|
+| **注册服务器数** | 3,012 个 | 官方 MCP Registry，同比增长 20% |
+| **OAuth 使用率** | 仅 8.5% | 其余用静态 API Key 或无认证 |
+| **CVE 数量** | 7 个 | 过去 12 个月 |
+| **最高 CVE 评分** | CVSS 9.6（严重）| 远程代码执行漏洞 |
+| **OpenClaw 暴露实例** | 42,000+ | 2026年1月发现 |
+| **其中未认证端点** | 1,000+ | 泄露 API Key、Slack 凭证、聊天记录 |
+
+**为什么 2026 年 MCP 安全突然变得重要？**
+
+```
+2025年：MCP 是新技术，大家忙着"能用"
+2026年：MCP 进入生产，企业发现"不安全"
+
+典型事故（2026年1月）：
+1. 42,000+ OpenClaw 实例暴露在公网
+2. 1,000+ 运行未认证的 MCP 端点
+3. API Key、Slack 凭证、聊天记录泄露
+4. CVSS 9.6 远程代码执行（1-click）
+```
+
+**MCP 安全的核心问题：身份是非人类**
+
+在 MCP 中，每个请求来自非人类身份：Agent、Server、Tool
+
+| 问题 | 风险 |
+|------|------|
+| **身份伪造** | 被破解的 Agent 冒充合法客户端 |
+| **Token 重放** | 旧 Token 被恶意复用 |
+| **权限升级** | Compromised Agent 跨系统横向移动 |
+
+**关键风险：SSRF（服务端请求伪造）**
+
+MCP Server 访问内部服务的天然特性让 SSRF 变得尤其危险：
+
+```python
+# 危险的 MCP Server 实现
+@mcp.tool()
+def fetch_url(url: str):
+    response = requests.get(url)  # SSRF 风险！
+    return response.text
+
+# 攻击者输入：
+# "https://169.254.169.254/latest/meta-data/" (AWS 元数据)
+# "http://localhost:5432/" (内部数据库)
+# "http://internal.corp:8080/admin" (内网管理后台)
+```
+
+**MCP Server 安全清单（企业必读）：**
+
+| 检查项 | 标准 | 高风险标志 |
+|--------|------|-----------|
+| **认证方式** | OAuth 2.1（必须）| 静态 API Key、无认证 |
+| **输入验证** | 严格校验 URL/参数类型长度 | 直接拼接到请求 |
+| **网络暴露** | stdio 本地 / HTTPS 云端 | 0.0.0.0 监听 |
+| **权限范围** | Scope 细粒度控制 | 不支持 Scope |
+| **日志审计** | 全链路记录可查 | 无日志或日志分散 |
+| **SSRF 防护** | URL 白名单/不允许内网 | 无验证直请求外部 |
+
+**OAuth 2.1 对 MCP 的要求（RFC 9001）：**
+
+MCP 规范强制要求 OAuth 2.1，包括：
+
+| 要求 | 说明 |
+|------|------|
+| **DCR（动态客户端注册）** | Agent 动态注册，无需预配置 |
+| **CIMD（客户端ID元数据文档）** | 标准化客户端身份 |
+| **Protected Resource Metadata** | RFC 9728，资源服务器元数据 |
+| **Resource Indicators** | RFC 8707，细粒度资源权限 |
+
+**企业 MCP 身份方案对比：**
+
+| 方案 | 提供商 | 适用场景 |
+|------|--------|----------|
+| **WorkOS** | OAuth 2.1 + DCR + CIMD | 企业级快速接入 |
+| **Keycloak（Red Hat）** | OAuth 2.1 + 完整企业SSO | 自托管企业 |
+| **AWS IAM** | OAuth 2.1 + AWS 生态 | AWS 环境 |
+| **静态 API Key** | 简易方案 | 开发/测试（⚠️生产禁用）|
+
+**面试话术：**
+
+> "2026 年 MCP 安全形势严峻：只有 8.5% 的 MCP Server 用 OAuth，其余都是明文 Key 或无认证。2026 年 1 月最严重的事故是 42,000+ OpenClaw 实例暴露在公网，1,000+ 个未认证端点泄露了 API Key 和 Slack 凭证。OWASP MCP Top 10 之外，我最关注 SSRF——MCP Server 天然要访问内部服务，攻击者只需要骗 Agent 请求内部地址就能拿到敏感数据。企业级 MCP 部署必须过 OAuth 2.1 + Scope 权限 + 全链路审计，这是合规底线。"
+
+**生产部署最小安全要求：**
+
+```bash
+# 1. 认证：必须 OAuth 2.1
+fastmcp server --auth-mode oauth2 --oauth-config oauth.yaml
+
+# 2. 网络：stdio 本地或 HTTPS
+# 本地开发：stdio（无需认证，数据不离开机器）
+# 生产环境：必须 HTTPS + OAuth
+
+# 3. SSRF 防护：URL 白名单
+ALLOWED_HOSTS=["api.github.com", "docs.company.com"]
+
+# 4. 限流：防止滥用
+MAX_CALLS_PER_MINUTE=100
+MAX_CONCURRENT_REQUESTS=10
+
+# 5. 审计日志
+AUDIT_LOG=true
+AUDIT_RETENTION_DAYS=90
+```
+
+</details>
+
+---
+
 ## 📝 更新记录
 
 | 日期 | 版本 | 更新内容 |
