@@ -2,7 +2,7 @@
 
 # 🚀 AI 应用开发工程师面试宝典
 
-> **⚠️ 本次更新(v3.89)：新增 Q39-Q40 AI编程工具；Q17 RAG防御体系；Q13 Agent Memory；Q26 EAGLE投机采样；Q30 MCP安全现状**
+> **⚠️ 本次更新(v3.90)：新增 Q39-Q40 AI编程工具；Q17 RAG防御体系；Q13 Agent Memory；Q26 EAGLE投机采样；Q30 MCP安全现状；Q15 Attention Matching 50x压缩**
 
 **🎯 373+ 道高频面试题 | 24 个核心模块 | 从基础到进阶系统化学习**
 
@@ -935,7 +935,7 @@ Made with ❤️ for the AI Community
 *版本: v3.85 | 更新: 2026-04-25 | by 二狗子 🐕*
 
 
-## 📚 数据更新（v3.89 - 2026-05-08）
+## 📚 数据更新（v3.90 - 2026-05-08}
 
 | 序号 | 模块 | 新增内容 | 高频度 | 题数 |
 |------|------|----------|--------|------|
@@ -943,9 +943,10 @@ Made with ❤️ for the AI Community
 | 🆕 | [🔬 RAG高级优化（新增Q17）](docs/20-rag-advanced-optimization/) | Q17 可防御RAG（5大结构性风险/7大决策/RRF混合搜索/Agentic RAG/合规架构） | 🔥🔥🔥🔥 | +1 |
 | 🆕 | [🧠 Agent规划与反思（新增Q13）](docs/22-agent-planning-reflection/) | Q13 Agent Memory架构（Flat Vector/Episodic/Graph/Hybrid/Mem0+Zep+Letta/LOCOMO/MemSync） | 🔥🔥🔥🔥 | +1 |
 | 🆕 | [🔬 推理框架（新增Q26）](docs/19-inference-frameworks/) | Q26 EAGLE投机采样（vs DFlash/自回归头/接受率85-95%/vLLM EAGLE v3） | 🔥🔥🔥🔥 | +1 |
+| 🆕 | [⚡ 推理优化（新增Q15）](docs/08-inference-optimization/) | Q15 Attention Matching（MIT 50x KV Cache压缩/选择性保留/五大优化方向图/生产级组合策略） | 🔥🔥🔥🔥🔥 | +1 |
 | 🆕 | [🔥 MCP协议与工具（新增Q30）](docs/14-mcp-skill-systems/) | Q30 MCP安全现状（8.5% OAuth使用率/42,000+暴露实例/SSRF/CVSS 9.6/企业级安全清单） | 🔥🔥🔥🔥🔥 | +1 |
 
-*版本: v3.89 | 更新: 2026-05-08 | by 二狗子 🐕*
+*版本: v3.90 | 更新: 2026-05-08 | by 二狗子 🐕*
 
 
 ## 📚 数据更新（v3.86 - 2026-04-30）
