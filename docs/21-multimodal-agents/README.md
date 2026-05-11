@@ -1023,3 +1023,208 @@ response = qwen3_vl.chat(interleaved_content)
 ---
 
 [返回目录 →](../../README.md)
+
+---
+
+## 四、2026年 GUI Agent 与 Computer Use：让AI控制真实界面（Q15）
+
+### Q15: 什么是GUI Agent？为什么2026年"Computer Use"成为多模态Agent的核心战场？
+
+<details>
+<summary>💡 答案要点</summary>
+
+**GUI Agent定义：**
+
+GUI Agent（图形界面智能体）是能够控制真实图形界面的AI系统——点击按钮、输入文本、拖拽元素、读取屏幕内容。2026年从"能不能用"进化到"有多可靠"。
+
+**为什么GUI Agent在2026年爆发：**
+
+| 驱动因素 | 说明 |
+|----------|------|
+| **多模态模型成熟** | GPT-4o、Gemini 2.5、Qwen3-VL等原生多模态模型能理解屏幕截图 |
+| **OS-Level Agent需求** | 操作系统级别的AI助手（如Apple Intelligence）需要控制桌面应用 |
+| **企业自动化** | 浏览器自动化 RPA 升级，AI控制Web应用完成复杂业务流程 |
+| **测试自动化** | AI驱动的UI测试，比传统Selenium更智能 |
+
+**Computer Use的技术栈：**
+
+```
+GUI Agent技术栈：
+┌─────────────────────────────────────────────────────┐
+│  AI Model（多模态）                                  │
+│  输入：截图/画面帧 → 输出：动作指令（JSON）           │
+├─────────────────────────────────────────────────────┤
+│  动作层                                             │
+│  Mouse: click, double_click, drag, scroll           │
+│  Keyboard: type, hotkey, copy/paste                 │
+│  Vision: OCR, Element Detection, Layout Parsing     │
+├─────────────────────────────────────────────────────┤
+│  平台层                                             │
+│  Browser: Playwright CDP / Chrome DevTools          │
+│  Desktop: AT-SPI (Linux) / Accessibility (Windows)   │
+│  Mobile: UIAutomation (iOS) / UIAutomator2 (Android) │
+└─────────────────────────────────────────────────────┘
+```
+
+**主流框架对比：**
+
+| 框架 | 平台 | 多模态模型 | 开源 | 2026年进展 |
+|------|------|------------|------|------------|
+| **anthropic/computer-use** | 浏览器+桌面 | Claude | ✅ | 官方推出的computer use demo |
+| **OpenAI/magentic** | 浏览器 | GPT-4o | ✅ | 单次Beta版本 |
+| **Mobile-Agent-v3** | 移动端 | 多模型 | ✅ | 开源SOTA |
+| **AppAgent** | 移动端 | 多模型 | ✅ | 企业级定制版 |
+| **CoCo Agent** | 跨平台 | 多模型 | ✅ | 华为诺亚方舟发布 |
+| **OS-World** | 跨OS | 多模型 | ✅ | 评估基准 |
+
+**OS-World评估基准：**
+
+OS-World是2026年最重要的GUI Agent评估基准，测试AI能否在真实操作系统（Ubuntu Windows macOS）中完成跨应用任务：
+
+- **任务类型**：文件操作、浏览器操作、文档编辑、邮件处理
+- **评估指标**：任务完成率、平均步骤数、恢复能力
+- **最新结果**：Claude Opus 4.5 在OS-World达到47.2%（最高），GPT-4.5达43.1%
+
+**GUI Agent vs 传统RPA：**
+
+| 维度 | 传统RPA | GUI Agent |
+|------|---------|-----------|
+| **配置方式** | 录制/规则 | 自然语言指令 |
+| **适应变化** | 固定流程，界面变化就断 | 能理解意图，自动适应小变化 |
+| **异常处理** | 预设分支 | 能推理下一步 |
+| **跨应用** | 需要专门集成 | 原生支持多应用协作 |
+| **学习成本** | 高（需要流程配置） | 低（自然语言描述任务） |
+
+**代码示例：基于Anthropic Computer Use**
+
+```python
+from anthropic import Anthropic
+from playwright.sync_api import sync_playwright
+
+client = Anthropic()
+
+def computer_use_agent(task: str):
+    """让AI控制浏览器的简单示例"""
+    with sync_playwright() as p:
+        browser = p.chromium.launch()
+        page = browser.new_page()
+        
+        # 初始化截图
+        screenshot = page.screenshot()
+        
+        while True:
+            response = client.messages.create(
+                model="claude-opus-4-5",
+                max_tokens=1024,
+                messages=[{
+                    "role": "user", 
+                    "content": f"任务: {task}\n\n当前屏幕截图已提供。"
+                }]
+            )
+            
+            # 解析AI的响应动作
+            action = parse_computer_action(response)
+            
+            if action["type"] == "click":
+                page.click(action["selector"])
+            elif action["type"] == "type":
+                page.fill(action["selector"], action["text"])
+            elif action["type"] == "done":
+                break
+                
+            screenshot = page.screenshot()
+```
+
+**生产级GUI Agent的核心挑战：**
+
+1. **界面变化检测**：网页更新后元素定位器失效
+2. **长任务维持**：跨小时任务的状态管理
+3. **安全边界**：AI操作的风险控制（误删文件、乱点购买按钮）
+4. **可审计性**：记录AI所有操作用于合规
+
+**面试话术：**
+> "GUI Agent是2026年多模态Agent最重要的落地场景。我看好这个方向有三个原因：多模态模型能力足够强了；企业有大量桌面/Web自动化需求；开源社区提供了OS-World这样的评估基准和Mobile-Agent-v3这样的成熟框架。面试时能说出computer use的技术栈（多模态模型→动作层→平台接口）和主流框架对比，说明你对2026年多模态Agent落地有实战级理解。"
+
+</details>
+
+### Q16: Mobile-Agent-v3和AppAgent有什么区别？移动端GUI Agent有哪些独特挑战？
+
+<details>
+<summary>💡 答案要点</summary>
+
+**移动端GUI Agent的特殊性：**
+
+相比桌面/浏览器，移动端有三个独特挑战：
+1. **触摸交互**：没有hover态，依赖视觉定位
+2. **系统限制**：后台进程、权限管理更严格
+3. **小屏幕**：信息密度高，元素密集
+
+**Mobile-Agent-v3 核心设计：**
+
+```python
+# Mobile-Agent-v3 核心流程
+class MobileAgentV3:
+    def __init__(self, model):
+        self.model = model  # 多模态模型
+        self.ui_parser = UIParser()  # 将UI转为结构化数据
+    
+    def step(self, observation):
+        """Agent单步推理"""
+        # 1. 视觉理解：分析截图，定位可交互元素
+        ui_elements = self.ui_parser.parse(observation.screenshot)
+        
+        # 2. 意图推理：结合历史，决定下一步动作
+        action = self.model.reason(
+            task=self.task,
+            history=self.trajectory,
+            ui_elements=ui_elements
+        )
+        
+        # 3. 执行动作
+        return self.execute(action)
+```
+
+**与AppAgent的核心区别：**
+
+| 维度 | Mobile-Agent-v3 | AppAgent |
+|------|-----------------|----------|
+| **UI解析** | 纯视觉+多模态模型 | XML Dump + 视觉双重 |
+| **动作空间** | Tap/Swipe/Long-press/Text | 更细粒度的坐标级 |
+| **多模态融合** | 端到端多模态 | 分阶段处理 |
+| **开源程度** | 完全开源，活跃社区 | 原论文，定制版闭源 |
+| **2026进展** | 持续更新，支持新平台 | 企业定制为主 |
+
+**移动端GUI Agent的独特挑战：**
+
+**1. 动态键盘遮挡**
+
+```
+问题：输入框获得焦点后，软键盘弹出，遮挡部分屏幕
+解决：检测键盘状态，动态调整截图区域；使用"提前录制备用坐标"
+```
+
+**2. 页面加载时机**
+
+```
+问题：点击后页面跳转，但加载有延迟，AI可能误判"操作失败"
+解决：动作执行后等待NMS（Navigation Match Signal）；检测loading spinner消失
+```
+
+**3. 手势复杂度**
+
+```
+问题：移动端有大量手势（滑动手势、双指缩放、长按）
+解决：定义原子手势库，AI选择组合而非单点坐标
+```
+
+**4. 跨应用协作**
+
+```
+问题：Agent任务经常需要跨应用（读取日历→发送邮件）
+解决：Android Intent系统；iOS URL Scheme；但需要权限授权
+```
+
+**面试话术：**
+> "移动端GUI Agent和桌面端的核心区别是'交互范式'——桌面靠鼠标指针精确点击，移动靠触摸和手势，元素还可能被键盘遮挡。Mobile-Agent-v3的解决方案是用纯视觉端到端处理，避免依赖脆弱的XML结构。我面试时会被问到'怎么解决键盘遮挡'，标准答案是检测键盘状态+动态调整截图区域+等待导航信号。2026年移动端Agent最看好的方向是'系统级Agent'——不是操作单个App，而是像Siri一样跨应用协作完成任务。"
+
+</details>
