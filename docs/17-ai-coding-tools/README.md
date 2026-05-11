@@ -4117,8 +4117,279 @@ Workspace 生成执行计划：
 3. 集成 CI/CD（Routines + MCP 做自动化）
 ```
 
+
+### Q41: Cursor May 2026有哪些重大更新？为什么Cursor SDK是企业级AI编程的新里程碑？
+
+<details>
+<summary>💡 答案要点</summary>
+
+**Cursor v2.5+ 更新（2026年5月安全补丁）**
+
+> "2026年5月 Cursor 发布了 v2.5+ 版本，修复了一个严重安全漏洞——恶意Git仓库可以通过Cursor的Agent机制在开发者机器上执行任意代码。同时Cursor还发布了多个重要新功能，包括Cursor SDK公开测试版。"
+
+**安全漏洞（Cursor v2.5+ 修复）：**
+
+```
+漏洞描述：
+  恶意Git仓库可以通过Cursor AI Agent机制
+  在开发者机器上执行任意代码
+
+影响范围：
+  → 开发者机器可能被攻击
+  → 源代码和密钥可能泄露
+  → 云服务访问权限可能被滥用
+
+修复方案：
+  → 升级到 Cursor v2.5+
+  → 隔离测试环境
+  → 收紧AI Agent权限
+
+防御建议：
+  → 不要把Cursor当"完全信任的AI co-founder"
+  → AI编程 Agent 应该被视为"半自主同事，有限访问权限"
+  → 生产环境代码必须人工审核
+```
+
+---
+
+**Cursor SDK 公开测试版（2026年5月重磅）**
+
+> "Cursor SDK是2026年5月最重要的企业级AI编程发布——它让团队可以用Cursor的运行时、harness和模型构建自己的编码Agent。这些Agent可以直接在Cursor的Agents Window和Web App里显示，实现了'用Cursor构建，为Cursor定制'的生态。"
+
+**Cursor SDK 核心能力：**
+
+```python
+# Cursor SDK 示例（伪代码）
+from cursor_sdk import Agent
+
+# 构建自定义编码Agent
+class SecurityReviewer(Agent):
+    def __init__(self):
+        super().__init__(
+            name="Security Reviewer",
+            model="cursor-sonnet-4",
+            capabilities=["static_analysis", "dependency_check", "secret_detection"]
+        )
+    
+    def review(self, code: str) -> SecurityReport:
+        # 用Cursor运行时执行安全审查
+        return self.run_analysis(code)
+
+# 在Cursor Agents Window中显示
+# 团队可以构建垂直场景的Agent
+# （安全审查、性能优化、代码审查、数据迁移）
+```
+
+| Cursor SDK 特性 | 说明 |
+|----------------|------|
+| **运行时** | 与Cursor相同的执行环境 |
+| **Harness** | 与Cursor内置Agent相同的控制框架 |
+| **模型** | 支持多种模型（Claude、GPT等） |
+| **集成** | Agent直接显示在Cursor Agents Window |
+| **API** | 更新版Cloud Agents API |
+
+---
+
+**Security Review in Beta（Teams & Enterprise）**
+
+> "Cursor在2026年5月为Teams和Enterprise用户推出Security Review beta——包括常驻Security Reviewer Agent和Vulnerability Scanner Agent，用于PR检查和定时代码库扫描。"
+
+| 功能 | 说明 |
+|------|------|
+| **Always-on Security Reviewer** | 每个PR自动触发安全审查 |
+| **Vulnerability Scanner** | 主动扫描代码库漏洞 |
+| **PR Checks** | 集成到PR流程，阻止不安全代码合并 |
+| **Scheduled Scans** | 定时全代码库安全扫描 |
+| **Slack Updates** | 安全告警直接推送到Slack |
+
+```yaml
+# .cursor/security-rules.yaml
+rules:
+  - id: sql-injection
+    pattern: "SELECT.*\$.*FROM"  # 检测SQL拼接
+    severity: critical
+    action: block_merge
+    
+  - id: hardcoded-secret
+    pattern: "(api_key|token|password)\s*=\s*['\"]"
+    severity: high
+    action: flag_for_review
+    
+  - id: unsafe-eval
+    pattern: "eval\(|exec\("
+    severity: high
+    action: block_merge
+```
+
+---
+
+**Interactive Canvases（Agents Window 新功能）**
+
+> "Cursor在2026年5月为Agents Window增加了Interactive Canvases——Agent可以在Canvas上创建dashboard、自定义界面、diff视图、todo列表等。这让Agent之间的协作更可视化。"
+
+| Canvas 场景 | 说明 |
+|------------|------|
+| **PR Review Dashboard** | 可视化展示PR问题分布 |
+| **Diff Review** | Agent生成的diff可直接在Canvas审查 |
+| **Agent Management** | 管理多个并行的Agent |
+| **Learning Interface** | 展示新库/框架的学习路径 |
+
+---
+
+**Agents Window 改进**
+
+| 改进 | 说明 |
+|------|------|
+| **Tiled Layout** | 多Agent并行运行，tile并排显示 |
+| **Voice Dictation** | 更可靠的语音输入 |
+| **Branch Selection** | 空状态直接选分支 |
+| **Direct Diff-to-File** | diff可直接跳到文件对应位置 |
+| **File Search Filters** | 更严格的代码作用域过滤 |
+
+---
+
+**面试话术：**
+
+> "2026年5月Cursor的两个重要发布：1）v2.5+安全补丁修复了恶意Git仓库通过Agent执行任意代码的严重漏洞，所有用户必须升级；2）Cursor SDK公开测试版让企业可以'用Cursor构建Agent'，这些Agent直接显示在CursorAgents Window里，实现了AI编程工具的平台化。Security Review beta则把安全审查从'人工做'变成'AI自动做'——PR检查、定时扫描、Slack告警全套覆盖。面试时能说清楚Cursor SDK的架构，说明你在关注AI编程工具的企业级生态，而不是只会用一个工具。"
+
 </details>
 
 ---
 
-*版本: v2.30 | 更新: 2026-05-08 | by 二狗子 🐕*
+### Q42: Claude Code Cloud Auto-Fix是什么？为什么"PR that fixes itself"是2026年AI编程的重大突破？
+
+<details>
+<summary>💡 答案要点</summary>
+
+**2026年3月发布：Auto Mode + Cloud Auto-Fix**
+
+> "Anthropic在2026年3月发布了两个关联功能：Auto Mode（本地权限智能判断）和Cloud Auto-Fix（云端PR自动修复）。这两个功能共同构成了'Anthropic眼中的AI编程未来'——人类只做决策，AI负责执行。"
+
+---
+
+**Auto Mode（本地权限智能判断）**
+
+> "Auto Mode解决的是'审批疲劳'问题——传统Claude Code每步操作都要用户确认，开发者不愿意用。Auto Mode用后台分类器模型评估每个工具调用，低风险自动执行，高风险才暂停。"
+
+```
+Auto Mode工作原理：
+
+用户："帮我重构auth模块"
+
+分类器判断：
+✅ 安全 → 自动执行（读取文件、分析代码、规划方案）
+⏸️ 风险 → 暂停确认（删除文件、修改生产配置、推送主分支）
+
+效果：
+  → 减少80%确认操作
+  → 保持安全性同时最大化自动化效率
+```
+
+**Auto Mode不是云端执行环境——它跑在你本地终端，针对你的本地文件系统。**
+
+---
+
+**Cloud Auto-Fix（云端PR自动修复）**
+
+> "Cloud Auto-Fix才是真正的革命——它把整个'修复PR'的工作流搬到云端Anthropic基础设施上执行，即使你关掉笔记本，PR依然在云端被Claude监控和修复。"
+
+**Cloud Auto-Fix 工作流：**
+
+```
+旧模式（本地）：
+  1. 开发者打开PR
+  2. 发现CI失败
+  3. 本地启动Claude Code
+  4. 粘贴PR链接："帮我修复"
+  5. Claude Code本地执行修复
+  6. 推送commit
+  7. 开发者关闭笔记本睡觉
+
+Cloud Auto-Fix模式（云端）：
+  1. 开发者打开PR（在web或手机Claude Code）
+  2. 开启Cloud Auto-Fix
+  3. Claude订阅GitHub PR事件
+  4. CI失败 → Claude自动在云端修复
+  5. reviewer评论 → Claude自动响应
+  6. 开发者睡觉，PR在云端被修复
+  
+关键差异：
+  → 开发者不需要保持笔记本开机
+  → PR可以在半夜被修复
+  → CI失败后Claude主动推送修复
+  → reviewer评论后Claude自动响应
+```
+
+**GitHub Actions自动化流程：**
+
+```yaml
+# .github/workflows/claude-autofix.yml
+name: Claude Code Auto-Fix
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+  issue_comment:
+    types: [created]
+
+jobs:
+  claude-autofix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        
+      - name: Start Claude Code Auto-Fix
+        uses: anthropics/claude-code-action@v1
+        with:
+          cloud-autofix: true
+        env:
+          ANTHROPIC_API_KEY: \${{ secrets.ANTHROPIC_API_KEY }}
+          
+      - name: Auto-fix on CI failure
+        if: failure()
+        run: |
+          # Claude Code watches the PR
+          # Fixes failures automatically
+          echo "Claude Code is watching this PR"
+```
+
+**GitHub Marketplace也有现成Action：**
+
+```
+PR Autofix with Claude Code
+https://github.com/marketplace/actions/pr-autofix-with-claude-code
+
+功能：
+  → CI失败自动触发Claude Code修复
+  → Reviewer评论自动响应
+  → Lint修复成本低，复杂安全漏洞需要更多推理
+```
+
+---
+
+**Cloud Auto-Fix vs 本地Claude Code**
+
+| 维度 | 传统本地模式 | Cloud Auto-Fix |
+|------|-------------|----------------|
+| **执行位置** | 本地机器 | Anthropic云端 |
+| **笔记本关机** | 无法继续 | 继续执行 |
+| **PR监控** | 手动触发 | 自动订阅GitHub事件 |
+| **CI失败修复** | 开发者本地启动 | 云端自动执行 |
+| **Reviewer响应** | 开发者手动回复 | Claude自动响应 |
+| **适用场景** | 开发者在线 | 全天候无人值守 |
+
+---
+
+**面试话术：**
+
+> "2026年3月Anthropic发布的Cloud Auto-Fix代表了AI编程工具的终极形态——'PR that fixes itself'。开发者只需要开启功能，Claude Code在云端自动监控PR事件、修复CI失败、响应reviewer评论，不需要保持笔记本开机，不需要任何人工干预。Auto Mode解决的是'本地效率'——减少80%的确认操作；Cloud Auto-Fix解决的是'全天候自动化'——让AI编程真正变成7x24小时的无人值守服务。面试时能说清楚这两个功能的本质区别（本地权限管理 vs 云端执行），说明你理解了AI编程工具从'工具'到'平台'的演进路径。"
+
+</details>
+
+---
+
+
+
+---
+
+*版本: v2.31 | 更新: 2026-05-12 | by 二狗子 🐕*
