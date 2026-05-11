@@ -952,8 +952,127 @@ print(f"本次调用成本: ${(thinking_cost + output_cost) / 1e6:.4f}")
 
 </details>
 
+### Q17: Claude Managed Agents 2026年5月三大新功能：Dreaming、Outcomes、Multiagent Orchestration 是什么？
+
+<details>
+<summary>💡 答案要点</summary>
+
+**2026年5月 Week 18/19 新功能（Anthropic发布）**
+
+> "Claude Managed Agents 是 Anthropic 的云托管 AI Agent 服务，2026年5月新增三个核心功能——Dreaming（记忆强化）、Outcomes（结果定义）、Multiagent Orchestration（多Agent编排）。这三个功能让 Managed Agents 从'单次任务执行'升级到'具备持续自我改进能力的Agent系统'。"
+
 ---
 
+**三个新功能解析：**
+
+```
+1. Dreaming（记忆强化）
+   → Agent回顾历史session，发现模式，帮助自我改进
+   → 记忆+ Dreaming协同工作：记忆存储，DREAMING分析和泛化
+
+2. Outcomes（结果定义）
+   → 用户定义"什么算成功"
+   → Agent自动评估自己是否达成目标
+
+3. Multiagent Orchestration（多Agent编排）
+   → 主Agent分解任务，分发给专家Agent（各自模型/提示词/工具）
+   → Leader + Specialist模式，企业级任务分解
+```
+
+---
+
+**Dreaming 机制详解：**
+
+```
+传统Agent：
+  → 每次session独立
+  → 经验不累积
+  → 同一错误可能重复犯
+
+Dreaming Agent：
+  → 每次session结束后运行Dreaming
+  → 回顾历史找到模式
+  → 将具体经验泛化为通用策略
+  → 下次遇到类似情况自动应用学到的模式
+
+记忆协同架构：
+  ┌─────────────┐    存储    ┌─────────────┐
+  │ Memory Tool │──────────▶│   Dreaming  │
+  │ (存储经验)   │           │ (分析模式)  │
+  └─────────────┘            └─────────────┘
+         ▲                        │
+         │ 读取                    │ 改进策略
+         │                        ▼
+  ┌─────────────┐           ┌─────────────┐
+  │  Agent运行时 │◀──────────│  泛化策略   │
+  └─────────────┘           └─────────────┘
+```
+
+**Outcomes 定义与评估：**
+
+```python
+# Outcomes用法示例
+outcomes = [
+    "完成代码审查并提交PR",
+    "PR必须通过所有CI检查",
+    "审查报告必须包含具体修复建议"
+]
+
+# Agent完成任务后自动评估
+if agent.check_outcomes(outcomes):
+    print("任务成功完成 ✓")
+else:
+    print("未达成目标，需重新执行")
+```
+
+**Multiagent Orchestration 架构：**
+
+```
+传统单Agent：
+  → 一个Agent处理所有任务
+  → 模型压力大，单点故障
+
+多Agent编排：
+  ┌──────────────────┐
+  │  Lead Agent      │  ← 主控Agent，理解任务，总体协调
+  │  (Claude Sonnet) │
+  └────────┬─────────┘
+           │ 分解任务并分发
+     ┌─────┴─────┬────────────┐
+     ▼           ▼            ▼
+┌─────────┐ ┌─────────┐ ┌─────────────┐
+│Specialist│ │Specialist│ │ Specialist  │
+│ Agent 1  │ │ Agent 2  │ │ Agent 3     │
+│(coding) │ │(review)  │ │(test)       │
+│Llama-3.8B│ │Claude-3.5│ │ GPT-5       │
+└─────────┘ └─────────┘ └─────────────┘
+           └──────┬──────┘
+                  │ 汇总结果
+            ┌─────▼─────┐
+            │ Lead Agent │
+            │  最终整合  │
+            └───────────┘
+```
+
+**vs LangChain Deep Agents：**
+
+| 特性 | Claude Managed Agents | LangChain Deep Agents v0.5 |
+|------|---------------------|---------------------------|
+| **Dreaming** | ✅ Anthropic原生 | ❌ 无 |
+| **Outcomes** | ✅ 结果评估 | ❌ 过程评估 |
+| **Multiagent** | ✅ 原生编排 | ✅ 开源替代 |
+| **云托管** | ✅ 完全托管 | ❌ 需自部署 |
+| **成本** | 按token计费 | 基础设施成本 |
+
+---
+
+**面试话术：**
+
+> "2026年5月Claude Managed Agents的三个新功能代表Agent系统的重要进化方向。Dreaming解决'Agent经验不累积'的问题——它让Agent能从具体经验中提取通用模式，避免重复犯错。Outcomes解决'Agent不知道自己有没有成功'的问题——用户定义清楚成功标准，Agent自己评估。Multiagent Orchestration解决'单Agent能力有限'的问题——用Leader+Specialist架构，让专业Agent做专业事。面试时能说清楚这三个功能的协同关系（记忆→分析→改进），说明你对企业级Agent架构有系统理解，不是只会写单Agent的提示词。"
+
+</details>
+
+---
 *版本: v3.2 | 更新: 2026-04-30 | by 二狗子 🐕*
 
 ---
