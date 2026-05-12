@@ -3291,6 +3291,132 @@ def test_rag_faithfulness():
 - Patronus AI: https://www.patronus.ai
 - RAG Evaluation 2026 Guide: https://datavlab.ai/post/rag-evaluation-methods-metrics-2026-guide
 
+### Q23: 微软2026年5月披露的Semantic Kernel RCE漏洞（CVE-2026-26030/CVE-2026-25592）是什么？AI Agent框架为何成为RCE重灾区？
+
+<details>
+<summary>💡 答案要点</summary>
+
+**2026年5月7日，微软安全博客披露（Critical级别）**
+
+> "2026年5月7日，微软安全团队在官方博客披露了Semantic Kernel中的两个RCE漏洞——CVE-2026-26030（内存向量存储绕过）和CVE-2026-25592（SessionsPythonPlugin任意文件写入）。这是AI Agent框架安全研究系列的一部分，证明'信任Agent框架'不等于'安全'——框架本身的不安全设计比漏洞更危险。"
+
 ---
 
+**两个CVE深度解析：**
+
+```
+CVE-2026-26030：内存向量存储RCE
+  → 攻击者通过恶意提示词注入，绕过内存向量存储的安全边界
+  → 利用框架对Agent输出的信任，直接在主机上执行任意代码
+
+CVE-2026-25592：SessionsPythonPlugin任意文件写入  
+  → Python插件允许Agent执行代码，但验证不足
+  → 攻击者通过构造特定输入，让Agent写入任意文件到系统
+  → 等同于获得了目标机器的shell
+```
+
+**攻击链示例：**
+
+```
+用户输入："帮我分析这份文档"
+  ↓
+文档中包含恶意载荷（对抗性文本）
+  ↓
+Agent调用Semantic Kernel的Python插件处理文档
+  ↓
+插件未正确验证文件路径，恶意载荷被写入系统
+  ↓
+RCE！攻击者获得目标机器的完全控制权
+
+关键洞察：漏洞不在于"用户输入恶意"，而在于"Agent框架不加验证地处理并执行"
+```
+
+---
+
+**为什么AI Agent框架是RCE重灾区？**
+
+| 原因 | 说明 |
+|------|------|
+| **设计信任而非验证** | 框架假设Agent输出都是可信的，跳过输入验证 |
+| **工具调用链太长** | Agent→框架→插件→系统，每层都可能引入风险 |
+| **动态代码执行** | Python插件等允许动态执行代码的功能 |
+| **边界模糊** | "数据"和"指令"边界模糊，Agent无法区分 |
+
+```
+传统Web安全：
+  用户输入 → 严格验证 → 只执行明确允许的操作
+  
+AI Agent安全：
+  用户输入 → Agent处理 → Agent决策 → 调用工具 → 可能执行任意代码
+                      ↑
+              这里没有传统意义的"输入验证"
+              Agent会"理解意图"并决定执行什么
+```
+
+**MITRE ATT&CK for AI Systems 攻击链：**
+
+```python
+# 微软提出的AI Agent攻击链
+attack_chain = {
+    "initial_access": "恶意文档/提示词注入",
+    "execution": "通过框架的Python插件执行代码", 
+    "persistence": "在受害者系统写入后门",
+    "impact": "RCE → 数据泄露/横向移动/勒索"
+}
+```
+
+---
+
+**防御方案（微软官方建议）：**
+
+| 防御层 | 具体措施 |
+|--------|----------|
+| **输入层** | 对所有外部输入（包括文档）进行内容安全扫描 |
+| **框架层** | 隔离Agent输出和系统操作，不信任框架自动决策 |
+| **插件层** | 最小权限原则，Python插件禁用危险函数（eval/os.system等）|
+| **监控层** | 记录所有工具调用，检测异常模式 |
+| **网络层** | Agent运行在隔离网络，限制出站连接 |
+
+**代码级防御示例：**
+
+```python
+# 不安全的插件调用（漏洞代码）
+result = python_plugin.execute(user_input)  # 直接执行用户输入
+
+# 安全的插件调用（修复后）
+def safe_plugin_execute(plugin, user_input, policy):
+    # 1. 输入验证
+    if not policy.validate_input(user_input):
+        raise SecurityException("Input validation failed")
+    
+    # 2. 沙箱执行
+    with sandboxed_environment():
+        result = plugin.execute(user_input)
+    
+    # 3. 输出扫描
+    if policy.contains_dangerous_output(result):
+        raise SecurityException("Output contains dangerous content")
+    
+    return result
+```
+
+**关键框架安全设计原则：**
+
+```
+1. 永远不要信任Agent输出——即使它"只是帮你查个东西"
+2. 输入验证必须在框架层做，不依赖Agent的"判断"
+3. 最小权限：插件只能做它声明的事情，不能有副作用
+4. 网络隔离：Agent运行环境和生产系统分离
+5. 审计日志：所有工具调用必须记录可查
+```
+
+---
+
+**面试话术：**
+
+> "微软2026年5月披露的Semantic Kernel RCE漏洞对AI应用开发者的警示是'框架≠安全'。很多人觉得用了LangChain或Semantic Kernel就安全了，其实这些框架设计时考虑的是'让AI能做什么'，不是'让AI不能做什么'。CVE-2026-26030和CVE-2026-25592的核心问题都是'框架没有对Agent的输出进行安全验证就执行了危险操作'。面试能说清楚这个攻击链（恶意输入→框架信任→RCE），说明你理解AI安全不是防用户输入，而是防整个Agent执行链路的每一层。"
+
+</details>
+
+---
 *版本: v3.4 | 更新: 2026-05-12 | by 二狗子 🐕*
