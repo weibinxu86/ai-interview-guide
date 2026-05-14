@@ -1836,3 +1836,804 @@ answer = llm.generate(prompt)
 **追问3：你们怎么做 RAG 的效果评估？有没有自动化的流程？**
 > "我们用 RAGAS 四指标：Faithfulness、Answer Relevancy、Context Recall、Context Precision。每周跑一次评估，用 500 道题覆盖 5 个场景。Pipeline 是：代码变更 → 触发评估 → P80 阈值判断 → 通过才允许上线。评估结果和上次对比，下降超过 5% 自动告警。"
 
+
+---
+
+## 腾讯 Q10-Q12 补充（2026年新增）
+
+### 腾讯Q10：微信内 AI 应用的技术挑战与架构设计
+
+<details>
+<summary>💡 答案要点</summary>
+
+**微信AI应用场景分析：**
+
+```
+微信生态：公众号/小程序/视频号/搜一搜/聊天
+核心挑战：
+① 私域流量管控严格，AI能力接入受限
+② 多端一致性要求高（iOS/Android/PC/Web）
+③ 海量并发（亿级日活）
+④ 合规要求（用户隐私、数据安全）
+```
+
+**技术架构设计：**
+
+```mermaid
+graph TB
+    User -->|自然语言| WeChatBot[微信Bot]
+    WeChatBot -->|请求| AIProxy[AI网关代理]
+    AIProxy -->|路由| Models[豆包/混元/kNN]
+    AIProxy -->|限流| RateLimiter[令牌桶限流]
+    Models -->|结果| AIProxy
+    AIProxy -->|合规检查| ContentFilter[内容安全]
+    ContentFilter -->|通过| WeChatBot
+    WeChatBot -->|回复| User
+```
+
+**核心挑战与解决方案：**
+
+| 挑战 | 描述 | 解决方案 |
+|------|------|----------|
+| **并发量大** | 亿级日活，峰值 QPS 100万+ | 模型路由 + 异步队列 + 限流熔断 |
+| **私域合规** | 微信对AI能力管控严格 | 白名单机制 + 内容审核前置 |
+| **多端适配** | iOS/Android/Web表现一致 | 统一 API 网关 + 客户端降级策略 |
+| **响应延迟** | 用户预期<2秒 | 语义缓存 + 预热模型 + 就近路由 |
+| **隐私保护** | 不能存用户对话 | 端侧处理 + 阅后即焚 + 加密传输 |
+
+**生产级配置：**
+
+```python
+# 微信AI网关配置
+WECHAT_AI_CONFIG = {
+    "model_routing": {
+        "simple_query": "doubao-pro",      # 简单问题用豆包
+        "complex_reasoning": "混元-turbo", # 复杂推理用混元
+        "multimodal": "wepro-4v"           # 图文理解用wepro
+    },
+    "rate_limit": {
+        "per_user": 20,    # 每用户每分钟20次
+        "per_ip": 100,     # 每IP每分钟100次
+        "global": 1000000  # 全局每分钟100万次
+    },
+    "cache": {
+        "enabled": True,
+        "ttl_seconds": 300,
+        "semantic_threshold": 0.92  # 语义相似度>92%命中缓存
+    },
+    "compliance": {
+        "pre_check": True,    # 发模型前先过合规
+        "post_check": True,   # 结果返回前再过合规
+        "audit_ratio": 0.05   # 5%抽样人工审核
+    }
+}
+```
+
+**面试话术：**
+> "微信内AI应用的核心挑战是'合规优先'：微信对AI能力管控很严，我们必须做内容审核前置。我设计的多层防护：用户输入→敏感词过滤→模型生成→合规检查→用户。而且微信有亿级日活，需要模型路由+限流熔断+语义缓存三合一，单次请求成本从0.15元降到0.04元。"
+
+</details>
+
+### 腾讯Q11：向量数据库在腾讯业务中的选型决策
+
+<details>
+<summary>💡 答案要点</summary>
+
+**腾讯业务场景分析：**
+
+```
+业务类型：
+- 微信搜一搜：海量用户-query检索
+- 腾讯文档：多人协作的内容检索
+- 腾讯视频：内容理解+推荐
+- 广告系统：人群定向+Lookalike
+
+选型核心考量：
+① 数据规模（亿级）
+② 延迟要求（<50ms）
+③ 成本控制
+④ 多租户隔离
+```
+
+**三大方案对比：**
+
+| 维度 | Pincone（云服务） | Milvus（自托管） | VectorDB for Tencent（内部） |
+|------|------------------|------------------|-------------------------------|
+| **适用场景** | 快速验证/中小规模 | 大规模/有运维能力 | 超大规模/内部业务 |
+| **数据规模** | <10亿向量 | 亿级+ | 10亿+ |
+| **延迟** | P99<100ms | 可定制 | <50ms（定制优化）|
+| **成本** | 按量付费，贵 | 硬件成本可控 | 内部结算 |
+| **运维** | 免运维 | 需要DBA | 平台团队支持 |
+| **多租户** | 按project隔离 | namespace隔离 | 租户级隔离 |
+
+**选型决策树：**
+
+```python
+def select_vector_db(business_type, data_scale, latency_req, budget):
+    """
+    向量数据库选型决策树
+    """
+    if data_scale > 10_000_000_000:  # > 100亿
+        return "VectorDB-Tencent"  # 自研或内部平台
+    
+    if latency_req < 50:  # < 50ms
+        if business_type == "user_facing":
+            return "Pinecone Serverless"  # 低延迟全球分布
+        else:
+            return "Milvus Cluster"  # 内部可用
+    
+    if budget < 10000:  # 月预算<1万
+        return "Pinecone Starter"  # 成本可控
+    
+    # 默认选Milvus（开源可控）
+    return "Milvus"
+
+# 实际选型
+recommendation = select_vector_db(
+    business_type="wechat_search",
+    data_scale=50_000_000_000,  # 500亿
+    latency_req=30,
+    budget=50000
+)
+# → VectorDB-Tencent（内部自研）
+```
+
+**混合检索架构：**
+
+```python
+class TencentVectorSearch:
+    def __init__(self):
+        self.hnsw = HNSWIndex()      # 快速向量检索
+        self.bm25 = BM25Index()      # 关键词补充
+        self.reranker = CrossEncoder() # 重排
+    
+    def search(self, query, top_k=20):
+        # Step 1: 向量检索（HNSW）
+        vector_results = self.hnsw.search(query, k=top_k*2)
+        
+        # Step 2: BM25补充（覆盖最新数据，HNSW更新慢）
+        bm25_results = self.bm25.search(query, k=top_k)
+        
+        # Step 3: 融合（RRF）
+        fused = self.rrf_fusion(vector_results, bm25_results, k=60)
+        
+        # Step 4: 重排（CrossEncoder）
+        reranked = self.reranker.rerank(query, fused[:top_k])
+        
+        return reranked
+```
+
+**面试话术：**
+> "腾讯内部有自研的VectorDB-Tencent，针对微信场景优化过，能支持500亿向量、P99<30ms。对于新业务，我推荐先Pinecone快速验证（1周上线），确认PMF后迁到Milvus（成本可控），等规模>10亿再迁内部平台。选型核心是：数据规模决定架构，延迟要求决定成本，业务阶段决定路径。"
+
+</details>
+
+### 腾讯Q12：多模型并存场景下的成本管控方案
+
+<details>
+<summary>💡 答案要点</summary>
+
+**多模型并存的必然性：**
+
+```
+腾讯AI业务现状：
+- 内部模型：混元（Hunyuan）、wepro、 hunyuan-function
+- 外部模型：GPT-4、Claude、GPT-3.5（部分场景）
+- 场景差异：简单问答用小模型，复杂推理用大模型
+
+问题：多模型如何统一管理？成本如何控制？
+```
+
+**成本管控四层架构：**
+
+```python
+# 多模型成本管控完整方案
+class ModelCostController:
+    def __init__(self):
+        self.models = {
+            # 内部模型（成本低）
+            "混元-turbo": {"price": 0.001, "latency": 800, "quality": 0.85},
+            "混元-pro": {"price": 0.01, "latency": 1500, "quality": 0.92},
+            "wepro-4v": {"price": 0.02, "latency": 2000, "quality": 0.95},
+            
+            # 外部模型（成本高）
+            "gpt-4o": {"price": 0.005, "latency": 1500, "quality": 0.95},
+            "claude-3-opus": {"price": 0.015, "latency": 2000, "quality": 0.97},
+        }
+        
+        self.model_router = ModelRouter()
+        self.semantic_cache = SemanticCache()
+        self.cost_alert = CostAlert()
+    
+    def route_and_call(self, query, user_tier):
+        """智能路由 + 成本控制"""
+        
+        # Layer 1: 缓存命中（省100%）
+        cached = self.semantic_cache.get(query)
+        if cached:
+            return cached, "cache", 0
+        
+        # Layer 2: 意图分类 → 模型选型
+        intent = self.classify_intent(query)
+        
+        # Layer 3: 成本优先 or 质量优先
+        if user_tier == "free":
+            # 免费用户：成本优先
+            model = self.select_cheap_model(intent)
+        elif user_tier == "vip":
+            # VIP用户：质量优先
+            model = self.select_best_model(intent)
+        else:
+            # 普通用户：均衡
+            model = self.select_balanced_model(intent)
+        
+        # Layer 4: 超预算熔断
+        if self.is_over_budget():
+            # 降级到更便宜的模型
+            model = self.downgrade_model(model)
+        
+        result = self.call_model(model, query)
+        self.record_cost(model, query, result)
+        
+        return result, model, self.models[model]["price"]
+    
+    def classify_intent(self, query):
+        """意图分类驱动模型选型"""
+        # 简单匹配用小模型，复杂推理用大模型
+        if self.is_simple_faq(query):
+            return "simple"
+        elif self.needs_multimodal(query):
+            return "multimodal"
+        elif self.needs_deep_reasoning(query):
+            return "complex"
+        else:
+            return "general"
+```
+
+**成本控制核心指标：**
+
+```yaml
+# 模型成本监控 Dashboard
+panels:
+  - title: 各模型调用量分布
+    type: pie
+    expr: sum(increase(model_api_calls_total[1d])) by (model)
+  
+  - title: 各模型成本占比
+    type: bar
+    expr: |
+      sum(increase(model_cost_total[1d])) by (model)
+      / sum(increase(model_cost_total[1d]))
+  
+  - title: 模型降级触发次数
+    type: graph
+    expr: sum(rate(model_downgrade_total[5m])) by (reason)
+  
+  - title: 缓存命中率趋势
+    type: line
+    expr: cache_hit_rate / cache_total * 100
+  
+  - title: 预计月度成本（滚动预测）
+    type: stat
+    expr: sum(increase(model_cost_total[1h])) * 24 * 30
+```
+
+**模型降级策略：**
+
+```python
+# 模型降级规则（按场景）
+DOWNGRADE_RULES = [
+    # 场景1：非核心功能用小模型
+    {
+        "path": "/api/chat/suggestion",
+        "original": "混元-pro",
+        "downgrade": "混元-turbo",
+        "trigger": "cost > 80% budget"
+    },
+    # 场景2：超时自动降级
+    {
+        "path": "/api/chat/search",
+        "original": "gpt-4o",
+        "downgrade": "混元-turbo",
+        "trigger": "latency > 3000ms"
+    },
+    # 场景3：非高峰期降级
+    {
+        "path": "/api/chat/background",
+        "original": "混元-pro",
+        "downgrade": "混元-turbo",
+        "trigger": "hour < 9 or hour > 22"  # 非高峰时段
+    }
+]
+```
+
+**成本归因与优化：**
+
+```python
+# 月度成本分析报告
+def generate_cost_report():
+    report = {
+        "total_cost": calculate_total_cost(),
+        "by_model": group_by_model(),
+        "by_user_tier": group_by_user_tier(),
+        "by_feature": group_by_feature(),
+        "cache_savings": calculate_cache_savings(),
+        "optimization_opportunities": [
+            {
+                "model": "混元-pro",
+                "scenario": "简单FAQ",
+                "potential_saving": "30%",
+                "action": "切换到混元-turbo"
+            },
+            {
+                "model": "gpt-4o",
+                "scenario": "非VIP用户复杂推理",
+                "potential_saving": "50%",
+                "action": "优先用混元-pro"
+            }
+        ]
+    }
+    return report
+```
+
+**面试话术：**
+> "多模型并存时，成本管控核心是'让对的模型处理对的任务'。我的方案：意图分类驱动路由（简单FAQ用小模型），语义缓存拦截重复问题（命中率35%省100%成本），超预算自动降级。实际效果：接入大模型后月成本从8万降到3万，质量指标（回答准确率）只下降2%。成本优化不是牺牲质量，而是更聪明地分配资源。"
+
+</details>
+
+---
+
+### 字节Q6-Q8 补充（2026年新增）
+
+### 字节Q6：豆包接入实践：从 API 调用到生产级部署
+
+<details>
+<summary>💡 答案要点</summary>
+
+**豆包（Doubao）特点：**
+
+```
+豆包优势：
+- 字节自研，中文理解好
+- 价格便宜（GPT-4的1/10）
+- 响应速度快
+- 生态集成（抖音/飞书/火山引擎）
+
+适用场景：国内业务、低成本、大规模
+```
+
+**接入方案对比：**
+
+| 接入方式 | 适用场景 | 延迟 | 成本 | 稳定性 |
+|----------|----------|------|------|--------|
+| **API 直调** | 快速验证 | P99<800ms | 按量计费 | 一般 |
+| **火山引擎SDK** | 生产部署 | P99<500ms | 批量折扣 | 好 |
+| **私有化部署** | 数据敏感 | 取决于硬件 | 一次性 | 最稳定 |
+
+**生产级接入代码：**
+
+```python
+from volcenginesdkarkruntime import Ark
+
+class DoubaoClient:
+    def __init__(self, api_key: str, model: str = "doubao-pro"):
+        self.client = Ark(api_key=api_key)
+        self.model = model
+        self.retry_config = RetryConfig(
+            max_attempts=3,
+            base_delay=1.0,
+            exponential_base=2
+        )
+    
+    async def chat(self, messages: list, stream: bool = False):
+        """豆包 API 调用封装"""
+        
+        for attempt in range(self.retry_config.max_attempts):
+            try:
+                response = await self.client.chat.completions.create(
+                    model=self.model,
+                    messages=messages,
+                    stream=stream,
+                    temperature=0.3,
+                    max_tokens=2000
+                )
+                return response
+                
+            except RateLimitError:
+                # 限流：指数退避
+                await asyncio.sleep(self.retry_config.get_delay(attempt))
+                
+            except APITimeoutError:
+                # 超时：降级到快模型
+                return await self.fallback_to_fast_model(messages)
+                
+            except Exception as e:
+                # 其他错误：重试或熔断
+                if attempt == self.retry_config.max_attempts - 1:
+                    await self.circuit_breaker.open()
+                    raise
+                await asyncio.sleep(0.5)
+    
+    async def fallback_to_fast_model(self, messages):
+        """降级到 doubao-lite"""
+        try:
+            return await self.client.chat.completions.create(
+                model="doubao-lite",
+                messages=messages,
+                temperature=0.3,
+                max_tokens=1000
+            )
+        except:
+            return {"error": "服务暂时不可用，请稍后再试"}
+```
+
+**生产部署关键配置：**
+
+```yaml
+# 字节 AI 网关配置
+doubao_gateway:
+  models:
+    doubao-pro:
+      endpoint: "ar-vim-4c26fg9y50001@ar-vim-4c26fg9y50001"
+      timeout: 30s
+      max_retries: 3
+      rate_limit:
+        per_second: 100
+        per_minute: 5000
+        
+    doubao-lite:
+      endpoint: "ep-20250615001"
+      timeout: 15s
+      max_retries: 2
+      rate_limit:
+        per_second: 200
+        
+  circuit_breaker:
+    error_threshold: 5  # 5次错误开路
+    recovery_timeout: 60s
+    
+  fallback_chain:
+    - doubao-pro
+    - doubao-lite
+    - gpt-3.5-turbo  # 外部兜底
+```
+
+**生产问题排查：**
+
+| 问题 | 原因 | 解决方案 |
+|------|------|----------|
+| 响应慢 P99>2s | 模型排队 | 扩容或启用缓存 |
+| 大量超时 | 限流触发 | 降级到lite或增加延迟容忍 |
+| 回答质量差 | 场景不匹配 | 调高temperature或切模型 |
+| 成本超预算 | 调用量突增 | 启用限流+缓存 |
+
+**面试话术：**
+> "豆包接入分三步：① 先API验证（1天），确认效果；② 接入火山引擎SDK，配置重试+限流+降级（1周）；③ 生产监控，P99延迟>1s自动告警（持续）。我踩过的坑：豆包有每分钟5000次限制，大促期间被限流，后来加了模型降级和异步队列才解决。"
+
+</details>
+
+### 字节Q7：TikTok 内容理解 AI 架构设计思路
+
+<details>
+<summary>💡 答案要点</summary>
+
+**TikTok 内容理解挑战：**
+
+```
+内容类型：短视频（15s-3min）+ 直播 + 评论 + 弹幕
+数据规模：10亿+ 视频，百万级创作者
+业务场景：内容推荐、内容审核、内容理解、创作者工具
+
+核心难点：
+① 视频理解需要多模态（视觉+音频+文本）
+② 实时性要求高（直播弹幕需<500ms）
+③ 多语言（全球200+国家）
+```
+
+**多模态内容理解架构：**
+
+```python
+class TikTokContentUnderstanding:
+    def __init__(self):
+        self.video_encoder = VideoEncoder()      # 视频帧编码
+        self.audio_encoder = AudioEncoder()      # 音频编码
+        self.text_encoder = TextEncoder()        # 文本编码
+        self.fusion = MultiModalFusion()        # 多模态融合
+        self.cache = RedisVectorCache()         # 结果缓存
+    
+    async def understand_video(self, video_url: str, tasks: list):
+        """视频多模态理解"""
+        
+        # Step 1: 并行提取多模态特征
+        video_emb = await self.video_encoder.encode(video_url, fps=1)  # 每秒1帧
+        audio_emb = await self.audio_encoder.encode(video_url)          # 音频特征
+        ocr_text = await self.extract_text(video_url)                  # OCR文字
+        
+        # Step 2: 按任务选择处理流程
+        results = {}
+        for task in tasks:
+            if task == "content_tag":
+                # 内容标签（体育/美食/旅游等）
+                results[task] = self.classify_content(video_emb, audio_emb, ocr_text)
+                
+            elif task == "quality_score":
+                # 内容质量分（清晰度/剪辑/创意）
+                results[task] = self.score_quality(video_emb, audio_emb)
+                
+            elif task == "creator_intent":
+                # 创作者意图（卖货/涨粉/娱乐）
+                results[task] = self.understand_intent(ocr_text, audio_emb)
+                
+            elif task == "sensitive_check":
+                # 敏感内容检测
+                results[task] = await self.check_sensitive(video_emb, audio_emb, ocr_text)
+        
+        return results
+    
+    async def understand_live_stream(self, stream_url: str):
+        """直播内容实时理解（弹幕/弹幕情感）"""
+        
+        # 实时处理流水线
+        pipeline = Pipeline([
+            ("audio_capture", AudioCapture(stream_url)),
+            ("speech_to_text", WhisperX()),          # 实时ASR
+            ("sentiment_analysis", SentimentModel()), # 情感分析
+            ("keyword_extraction", KeywordExtractor()),
+            ("real_time_alert", AlertSystem())        # 实时告警
+        ])
+        
+        async for result in pipeline.run():
+            yield result  # 实时输出
+```
+
+**多语言处理策略：**
+
+```python
+# TikTok多语言内容理解
+MULTI_LANG_CONFIG = {
+    "zh": {"model": "doubao-pro-zh", "priority": 1},
+    "en": {"model": "gpt-4o", "priority": 2},
+    "ja": {"model": "doubao-pro-ja", "priority": 2},
+    "ko": {"model": "doubao-pro-ko", "priority": 2},
+    "other": {"model": "gpt-4o", "priority": 3}  # 其他语言用GPT-4
+}
+
+async def understand_content_lang(content: dict, lang: str):
+    """根据语言选择模型"""
+    config = MULTI_LANG_CONFIG.get(lang, MULTI_LANG_CONFIG["other"])
+    
+    # 高优先级语言用本地模型（快+便宜）
+    # 低优先级语言用外部模型（质量好）
+    if config["priority"] <= 2:
+        return await doubao_native(content, config["model"])
+    else:
+        return await openai_translate_and_process(content)
+```
+
+**内容推荐特征工程：**
+
+```python
+# TikTok推荐系统内容理解特征
+CONTENT_FEATURES = {
+    # 视觉特征
+    "visual_scene": "室内/室外/自然/城市",
+    "visual_objects": ["人", "食物", "风景", "商品"],
+    "visual_quality": 0.0-1.0,  # 清晰度分数
+    
+    # 音频特征
+    "audio_type": "音乐/对话/环境音",
+    "audio_language": "zh/en/other",
+    "audio_emotion": "positive/negative/neutral",
+    
+    # 文本特征
+    "text_entities": ["人物", "地点", "品牌"],
+    "text_topics": ["美食", "旅游", "美妆", "科技"],
+    "text_sentiment": 0.0-1.0,
+    
+    # 互动特征
+    "expected_engagement": "high/medium/low",
+    "target_audience": ["年轻人", "妈妈", "职场人"]
+}
+```
+
+**面试话术：**
+> "TikTok内容理解的核心是多模态融合+多语言支持。我的架构：视频帧+音频+OCR并行提取特征 → 按任务分发（标签/质量分/意图/敏感检测）→ 结果缓存。关键优化：① 直播场景用流式处理，<500ms响应；② 多语言用本地模型处理高优先级语言（中文/英语），其他语言翻译后处理；③ 敏感检测前置，涉黄涉暴内容在特征提取阶段就拦截。"
+
+</details>
+
+### 字节Q8：模型监控体系搭建：指标设计与告警策略
+
+<details>
+<summary>💡 答案要点</summary>
+
+**模型监控四大维度：**
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                  LLM 模型监控体系                            │
+├─────────────────┬─────────────────┬─────────────────────────┤
+│  性能指标        │   质量指标      │   业务指标              │
+│  - TTFT         │   - 准确率      │   - 用户满意度          │
+│  - TPS          │   - 幻觉率      │   - Task完成率          │
+│  - 错误率        │   - 回复相关度  │   - 转化率              │
+├─────────────────┼─────────────────┼─────────────────────────┤
+│  成本指标        │   安全指标      │   系统指标              │
+│  - Token消耗    │   - 敏感词触发  │   - 可用性              │
+│  - API调用费    │   - Prompt注入  │   - 错误分布            │
+│  - ROI          │   - 合规违规    │   - 限流触发率          │
+└─────────────────┴─────────────────┴─────────────────────────┘
+```
+
+**核心指标定义与采集：**
+
+```python
+# 模型监控指标定义
+class ModelMetrics:
+    # 性能指标
+    TTFT = Histogram("llm_time_to_first_token", "首Token时间", ["model"])
+    TPS = Histogram("llm_tokens_per_second", "生成速度", ["model"])
+    total_latency = Histogram("llm_total_latency", "端到端延迟", ["model"])
+    
+    # 质量指标
+    response_quality = Gauge("llm_response_quality_score", "回复质量分", ["model"])
+    hallucination_rate = Gauge("llm_hallucination_rate", "幻觉率", ["model"])
+    
+    # 成本指标
+    input_tokens = Counter("llm_input_tokens_total", "输入Token总数", ["model"])
+    output_tokens = Counter("llm_output_tokens_total", "输出Token总数", ["model"])
+    api_cost = Counter("llm_api_cost_total", "API费用", ["model"])
+    
+    # 安全指标
+    sensitive_trigger = Counter("llm_sensitive_trigger_total", "敏感词触发", ["category"])
+    injection_attempt = Counter("llm_injection_attempt_total", "注入攻击尝试")
+    
+    async def record_response(self, model, response_data):
+        """每次响应后记录指标"""
+        self.TTFT.labels(model).observe(response_data.ttft)
+        self.input_tokens.labels(model).inc(response_data.input_tokens)
+        self.output_tokens.labels(model).inc(response_data.output_tokens)
+        self.api_cost.labels(model).inc(response_data.cost)
+        
+        # 异步质量评估（采样10%）
+        if random.random() < 0.1:
+            quality_score = await self.evaluate_quality(response_data)
+            self.response_quality.labels(model).set(quality_score)
+```
+
+**告警规则设计：**
+
+```yaml
+# alertmanager-rules.yaml
+groups:
+  - name: llm-alerts
+    rules:
+      # P1: 服务不可用
+      - alert: LLMServerDown
+        expr: up{job="llm-api"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "LLM服务不可用"
+      
+      # P2: 延迟过高
+      - alert: LLMHighLatency
+        expr: |
+          histogram_quantile(0.99, 
+            rate(llm_total_latency_bucket[5m])
+          ) > 5
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "LLM P99延迟超过5秒"
+      
+      # P3: 质量下降
+      - alert: LLMQualityDrop
+        expr: |
+          llm_response_quality_score < 0.7
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "LLM回复质量持续低于0.7"
+      
+      # P4: 成本异常
+      - alert: LLMCostAnomaly
+        expr: |
+          sum(increase(llm_api_cost_total[1h])) 
+          > 1.5 * avg_over_time(
+              sum(increase(llm_api_cost_total[1h]))[7d:1h]
+            )
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "LLM成本异常，本小时花费是上周平均的1.5倍"
+      
+      # P5: 幻觉率飙升
+      - alert: LLMHallucinationSpike
+        expr: |
+          rate(llm_hallucination_detected_total[5m])
+          > 0.05  # 5%幻觉率
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "LLM幻觉率超过5%，需要立即检查"
+      
+      # P6: 安全攻击
+      - alert: LLMInjectionAttack
+        expr: |
+          rate(llm_injection_attempt_total[1m]) > 10
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "检测到Prompt注入攻击，10次/分钟"
+```
+
+**监控 Dashboard 设计：**
+
+```yaml
+# Grafana LLM监控Dashboard
+dashboard:
+  title: "LLM 全链路监控"
+  
+  rows:
+    - title: "业务健康度"
+      panels:
+        - type: stat
+          title: "Task完成率"
+          expr: |
+            sum(rate(llm_task_completed_total[5m]))
+            / sum(rate(llm_task_started_total[5m])) * 100
+          thresholds:
+            - value: 90
+              color: red
+            - value: 95
+              color: green
+        
+        - type: gauge
+          title: "平均用户满意度"
+          expr: avg(llm_user_satisfaction_score)
+        
+    - title: "性能监控"
+      panels:
+        - type: timeseries
+          title: "延迟趋势 (P50/P95/P99)"
+          expr: |
+            histogram_quantile(0.50, rate(llm_total_latency_bucket[5m]))
+            histogram_quantile(0.95, rate(llm_total_latency_bucket[5m]))
+            histogram_quantile(0.99, rate(llm_total_latency_bucket[5m]))
+        
+        - type: timeseries
+          title: "TTFT 趋势"
+          expr: histogram_quantile(0.50, rate(llm_time_to_first_token_bucket[5m]))
+    
+    - title: "成本分析"
+      panels:
+        - type: timeseries
+          title: "日Token消耗趋势"
+          expr: sum(increase(llm_input_tokens_total[1d])) + sum(increase(llm_output_tokens_total[1d]))
+        
+        - type: stat
+          title: "预计月度成本"
+          expr: sum(increase(llm_api_cost_total[1h])) * 24 * 30
+    
+    - title: "安全监控"
+      panels:
+        - type: timeseries
+          title: "敏感词触发趋势"
+          expr: sum(rate(llm_sensitive_trigger_total[5m])) by (category)
+        
+        - type: table
+          title: "注入攻击 Top 5"
+          expr: topk(5, sum(rate(llm_injection_attempt_total[5m])) by (ip))
+```
+
+**面试话术：**
+> "我的模型监控体系分四层：① 基础设施层（延迟/吞吐量/错误率）；② 模型质量层（幻觉率/准确率）；③ 业务层（任务完成率/用户满意度）；④ 安全层（敏感词/注入攻击）。告警规则按Severity分级：P1服务不可用立即通知，SRE 5分钟内响应；P2延迟过高15分钟响应；P3质量下降1小时响应。最重要的是成本告警——我设置预计日成本>80%阈值自动通知，防止月底账单爆表。"
+
+</details>
+
