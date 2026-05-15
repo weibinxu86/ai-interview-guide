@@ -1520,3 +1520,432 @@ class AgentBudgetController:
 
 </details>
 
+
+### Q12: SLA 违约复盘模板：从告警到根因分析的完整流程
+
+<details>
+<summary>💡 答案要点</summary>
+
+**SLA 违约场景分类：**
+
+```python
+# SLA 违约类型与响应级别
+SLA_BREACH_TYPES = {
+    "availability": {
+        "sla": "99.9% 月可用率",
+        "breach": "< 99.9%",
+        "impact": "用户无法访问",
+        "response_time": "15 分钟",
+        "severity": "P1"
+    },
+    "latency_p99": {
+        "sla": "P99 < 2s",
+        "breach": ">= 2s",
+        "impact": "用户体验下降",
+        "response_time": "30 分钟",
+        "severity": "P2"
+    },
+    "task_completion": {
+        "sla": "任务完成率 > 95%",
+        "breach": "< 95%",
+        "impact": "业务指标下降",
+        "response_time": "1 小时",
+        "severity": "P2"
+    },
+    "cost_overrun": {
+        "sla": "日成本 < $200",
+        "breach": ">= $200",
+        "impact": "财务损失",
+        "response_time": "2 小时",
+        "severity": "P3"
+    }
+}
+```
+
+**复盘模板（五步法）：**
+
+```markdown
+## SLA 违约复盘报告
+
+### 1. 事件概述
+- **时间**: 2026-05-14 14:30 - 15:15
+- **持续**: 45 分钟
+- **影响**: 3,420 用户受影响，任务完成率从 97% 降至 72%
+- **SLA 类型**: P99 延迟超标（P99 = 4.8s > SLA 2s）
+- **严重程度**: P1
+
+### 2. 时间线（Timeline）
+| 时间 | 事件 |
+|------|------|
+| 14:30 | 监控系统触发 P99 > 2s 告警 |
+| 14:32 | SRE 收到 PagerDuty 告警 |
+| 14:35 | 开始排查，发现向量检索延迟异常 |
+| 14:42 | 确认 Milvus 服务 CPU 100% |
+| 14:50 | 尝试扩容，Pod 无法调度（资源不足） |
+| 15:00 | 触发降级预案，切换到本地缓存检索 |
+| 15:10 | 服务恢复，P99 恢复到 1.5s |
+| 15:15 | 解除告警，通知业务方 |
+
+### 3. 根因分析（Root Cause）
+**直接原因**: Milvus 索引碎片化导致查询性能下降
+
+**根本原因**:
+1. HNSW 索引没有设置 `maxSegments`，导致段数过多
+2. 监控缺失：没有设置 segment count 告警
+3. 扩容策略不当：HPA 设置的 maxReplicas 太小
+
+**技术细节**:
+```sql
+-- 问题：segment 数量从 5 增长到 156
+SELECT segment_name, num_segments, memory_usage 
+FROM milvus.segments 
+WHERE collection = "user_knowledge"
+ORDER BY num_segments DESC;
+
+-- 原因：连续写入 48 小时没有触发合并
+```
+
+### 4. 修复措施（Fixes）
+| 措施 | 负责 | 状态 | 完成时间 |
+|------|------|------|----------|
+| 设置 `maxSegments=20` | @SRE-张工 | ✅ 已完成 | 2026-05-14 |
+| 添加 segment count 监控 | @SRE-李工 | ✅ 已完成 | 2026-05-15 |
+| 扩大 HPA maxReplicas 5→20 | @K8s-王工 | ✅ 已完成 | 2026-05-14 |
+| 制定定时 segment 合并 cron | @SRE-张工 | 🔄 进行中 | 2026-05-16 |
+
+### 5. 预防措施（Prevention）
+```
+┌─────────────────────────────────────────────────────────────┐
+│  预防措施清单                                               │
+├─────────────────────────────────────────────────────────────┤
+│  ✅ 已添加：segment 数量监控（> 30 触发告警）                   │
+│  ✅ 已添加：HNSW merge 操作 cron（每日凌晨 3 点）             │
+│  ✅ 已添加：HPA maxReplicas 扩容到 20                         │
+│  🔄 进行中：降级预案自动化（超时自动切换缓存）                 │
+│  ⏳ 待完成：故障演练（每月一次）                              │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### 6. 影响评估
+- **用户影响**: 3,420 用户 × 平均 5 分钟延迟 = 17,100 分钟
+- **业务损失**: 约 120 次任务失败，估计影响收入 $2,400
+- **已补偿**: 向受影响用户提供 VIP 会员 3 天
+
+### 7. 责任人签收
+- SRE Lead: _______________ 日期: _______________
+- Engineering Manager: _______________ 日期: _______________
+
+### 8. 下次审查时间
+2026-05-21（1周后复查预防措施执行情况）
+```
+
+**复盘会议话术：**
+
+```python
+复盘话术模板 = """
+1. 首先承认问题（不要甩锅）
+   "这次 SLA 违约是我们的责任，我代表团队道歉。"
+   
+2. 明确影响范围（不要轻描淡写）
+   "45 分钟内影响了 3,420 用户，有 120 个任务失败。"
+   
+3. 说明直接原因（技术细节要清晰）
+   "Milvus HNSW 索引的 segment 数从 5 增长到 156，
+   导致查询性能严重下降。"
+   
+4. 解释根本原因（不要只说表层原因）
+   "根本原因是监控缺失——我们没有监控 segment 数量，
+   也没有设置阈值告警，导致问题累积了 48 小时才爆发。"
+   
+5. 说明已采取的措施（展示行动）
+   "我们已经：① 设置了 segment 数量上限；
+   ② 添加了定时合并 cron；③ 扩容了 HPA maxReplicas。"
+   
+6. 承诺预防（展示闭环）
+   "我们承诺：1 周内完成故障演练，
+   确保同样的问题不会再发生。"
+"""
+```
+
+**面试话术：**
+> "我的复盘方法论是'五步法'：事件概述→时间线→根因→修复→预防。每次 SLA 违约后 24 小时内必须完成初步复盘，1 周内完成完整报告。关键原则：不要甩锅、不要轻描淡写、要找到根本原因（不是表层原因）。我最引以为豪的复盘是发现了一个看似'网络抖动'的问题，实际上是数据库连接池泄漏，修复后类似问题再也没出现过。"
+
+</details>
+
+### Q13: Agent 日志结构化设计：如何让日志可搜索、可分析？
+
+<details>
+<summary>💡 答案要点</summary>
+
+**日志设计原则：**
+
+```
+传统日志：文本格式，难以搜索
+结构化日志：JSON 格式，可查询、可分析、可告警
+
+Agent 日志特殊要求：
+① TraceID 关联（同一请求的所有日志）
+② 步骤追踪（每个 Tool 调用是独立的 Span）
+③ 上下文保存（中间状态的 Thought/Action/Observation）
+④ 性能埋点（延迟、Token 消耗、成本）
+```
+
+**结构化日志 Schema：**
+
+```python
+from dataclasses import dataclass, field
+from datetime import datetime
+from typing import Optional, List, Dict, Any
+import json
+
+@dataclass
+class AgentLogEntry:
+    """Agent 结构化日志条目"""
+    
+    # 基础字段（必须）
+    timestamp: str = field(default_factory=lambda: datetime.utcnow().isoformat())
+    level: str = "INFO"  # DEBUG/INFO/WARNING/ERROR
+    trace_id: str = ""   # 跨请求唯一
+    span_id: str = ""    # 当前步骤唯一
+    
+    # Agent 上下文
+    agent_name: str = ""
+    agent_version: str = ""
+    task_id: str = ""
+    session_id: str = ""
+    
+    # 步骤信息
+    step_index: int = 0
+    step_type: str = ""  # "thought"/"action"/"observation"/"result"
+    
+    # LLM 调用信息
+    model: str = ""
+    prompt_tokens: int = 0
+    completion_tokens: int = 0
+    total_tokens: int = 0
+    latency_ms: int = 0
+    cost_usd: float = 0.0
+    
+    # Tool 调用信息
+    tool_name: str = ""
+    tool_args: Dict[str, Any] = field(default_factory=dict)
+    tool_result: Any = None
+    tool_error: Optional[str] = None
+    
+    # 业务信息
+    user_id: str = ""
+    intent: str = ""     # 用户意图分类
+    success: bool = True
+    error_message: Optional[str] = None
+    
+    # 可扩展字段
+    extra: Dict[str, Any] = field(default_factory=dict)
+    
+    def to_json(self) -> str:
+        """序列化为 JSON"""
+        return json.dumps(self.__dict__, ensure_ascii=False, default=str)
+    
+    @classmethod
+    def from_json(cls, json_str: str) -> "AgentLogEntry":
+        """反序列化"""
+        return cls(**json.loads(json_str))
+    
+    def to_otel_span(self) -> dict:
+        """转换为 OpenTelemetry Span 格式"""
+        return {
+            "trace_id": self.trace_id,
+            "span_id": self.span_id,
+            "parent_span_id": self.parent_span_id if hasattr(self, "parent_span_id") else "",
+            "operation_name": f"{self.agent_name}.{self.step_type}",
+            "start_time": self.timestamp,
+            "duration_ms": self.latency_ms,
+            "tags": {
+                "agent_name": self.agent_name,
+                "step_index": self.step_index,
+                "model": self.model,
+                "tool_name": self.tool_name,
+                "success": str(self.success),
+            },
+            "logs": [
+                {"timestamp": self.timestamp, "fields": self.__dict__}
+            ]
+        }
+```
+
+**日志采集架构：**
+
+```python
+import logging
+from opentelemetry import trace
+from logging.handlers import RotatingFileHandler
+import json
+
+class AgentJSONFormatter(logging.Formatter):
+    """JSON 格式日志 formatter"""
+    
+    def format(self, record: logging.LogRecord) -> str:
+        log_data = {
+            "timestamp": self.formatTime(record, self.datefmt),
+            "level": record.levelname,
+            "logger": record.name,
+            "message": record.getMessage(),
+            "trace_id": self._get_trace_id(),
+            "span_id": self._get_span_id(),
+            "agent_name": getattr(record, "agent_name", ""),
+            "step_index": getattr(record, "step_index", 0),
+            "model": getattr(record, "model", ""),
+            "tool_name": getattr(record, "tool_name", ""),
+            "success": getattr(record, "success", True),
+        }
+        
+        # 添加额外字段
+        if hasattr(record, "extra"):
+            log_data.update(record.extra)
+        
+        return json.dumps(log_data, ensure_ascii=False)
+    
+    def _get_trace_id(self) -> str:
+        span = trace.get_current_span()
+        if span:
+            ctx = span.get_span_context()
+            return format(ctx.trace_id, "032x") if ctx else ""
+        return ""
+    
+    def _get_span_id(self) -> str:
+        span = trace.get_current_span()
+        if span:
+            ctx = span.get_span_context()
+            return format(ctx.span_id, "016x") if ctx else ""
+        return ""
+
+# 配置日志
+logger = logging.getLogger("agent")
+logger.setLevel(logging.INFO)
+handler = RotatingFileHandler("/var/log/agent/app.log", maxBytes=100_000_000, backupCount=10)
+handler.setFormatter(AgentJSONFormatter())
+logger.addHandler(handler)
+```
+
+**日志查询示例（Elasticsearch）：**
+
+```python
+# 查询某个 TraceID 的所有日志
+QUERY_TRACE = """
+{
+  "query": {
+    "bool": {
+      "must": [
+        {"match": {"trace_id": "abc123def456"}}
+      ]
+    }
+  },
+  "sort": [{"timestamp": "asc"}],
+  "size": 1000
+}
+"""
+
+# 查询所有失败的 Tool 调用
+QUERY_FAILED_TOOLS = """
+{
+  "query": {
+    "bool": {
+      "must": [
+        {"match": {"level": "ERROR"}},
+        {"match": {"tool_name": "search_database"}},
+        {"range": {"timestamp": {"gte": "now-1h"}}}
+      ]
+    }
+  }
+}
+"""
+
+# 查询 Token 消耗异常（> 10K）
+QUERY_HIGH_TOKEN = """
+{
+  "query": {
+    "bool": {
+      "must": [
+        {"range": {"total_tokens": {"gt": 10000}}},
+        {"range": {"timestamp": {"gte": "now-1d"}}}
+      ]
+    }
+  },
+  "aggs": {
+    "by_agent": {
+      "terms": {"field": "agent_name"},
+      "aggs": {
+        "avg_tokens": {"avg": {"field": "total_tokens"}},
+        "max_tokens": {"max": {"field": "total_tokens"}},
+        "p95_tokens": {"percentiles": {"field": "total_tokens", "percents": [95]}}
+      }
+    }
+  }
+}
+"""
+
+# 统计每小时的错误率
+QUERY_ERROR_RATE = """
+{
+  "query": {
+    "bool": {
+      "must": [
+        {"match": {"level": "ERROR"}},
+        {"range": {"timestamp": {"gte": "now-24h"}}}
+      ]
+    }
+  },
+  "aggs": {
+    "hourly_errors": {
+      "date_histogram": {
+        "field": "timestamp",
+        "interval": "hour"
+      }
+    }
+  }
+}
+```
+
+**日志告警规则：**
+
+```yaml
+# Prometheus Alert 规则（基于日志 metrics）
+groups:
+  - name: agent-log-alerts
+    rules:
+      # 高错误率告警
+      - alert: AgentHighErrorRate
+        expr: |
+          sum(rate(agent_log_errors_total[5m])) by (agent_name)
+          / sum(rate(agent_log_total[5m])) by (agent_name) > 0.05
+        for: 5m
+        annotations:
+          summary: "Agent {{ $labels.agent_name }} 错误率超过 5%"
+          description: "最近 5 分钟错误率 {{ $value }}"
+
+      # Tool 调用超时告警
+      - alert: AgentToolTimeout
+        expr: |
+          histogram_quantile(0.99, 
+            rate(agent_tool_latency_seconds_bucket[5m])
+          ) > 10
+        for: 3m
+        annotations:
+          summary: "Tool 调用 P99 延迟超过 10 秒"
+
+      # Token 消耗异常告警
+      - alert: AgentHighTokenConsumption
+        expr: |
+          sum(rate(agent_token_total[1h])) by (agent_name)
+          > 1.5 * avg_over_time(
+              sum(rate(agent_token_total[1h])) by (agent_name)[7d:1h]
+            )
+        for: 15m
+        annotations:
+          summary: "Agent {{ $labels.agent_name }} Token 消耗异常"
+```
+
+**面试话术：**
+> "我的 Agent 日志设计核心是'结构化 + 可追溯'。每个日志条目包含 trace_id、span_id、step_index、model、tool_name，每次 LLM 调用都记录 token 消耗和延迟。这样做的好处是：① 查问题快——输入 trace_id 就能看到整个请求链路；② 分析容易——用 Elasticsearch 按 agent_name、tool_name、success 聚合；③ 告警准——错误率/延迟超过阈值自动通知。生产环境我每天查日志 < 10 次，但每次都能 5 分钟内定位问题。"
+
+</details>
+
