@@ -3,7 +3,7 @@
 # 🚀 AI 应用开发工程师面试宝典
 
 > **⚠️ 
-本次更新(v3.125)：新增 Q8 async+httpx并发调用(24-python)、Q18 混合检索+RRF融合(20-rag-advanced)、Q15 ToT思维树(22-agent-planning)、Q20 层级职责划分(13-multi-agent)****
+本次更新(v3.126)：新增 Q20 Gemini 3.5 Flash(11-多模态)、Q21 Kimi K2.6 Agent Swarm 300并行子Agent(13-多Agent)
 
 **🎯 385+ 道高频面试题 | 24 个核心模块 | 从基础到进阶系统化学习**
 
@@ -14,7 +14,7 @@
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/guocong-bincai/ai-interview-guide/pulls)
 
 **适用岗位:** AI应用工程师 · LLM工程师 · AI Agent开发 · RAG系统开发
-**版本:** v3.125 | **最后更新:** 2026-05-20"""
+**版本:** v3.126 | **最后更新:** 2026-06-01"""
 
 [📖 开始学习](#-学习路线) · [🔥 高频题库](#-核心面试题按难度分级) · [💡 实战案例](#-实战案例) · [🤝 贡献指南](#-贡献指南)
 
@@ -554,7 +554,7 @@ ai-interview-guide/
 
 ---
 
-**📅 最后更新:** 2026-04-14 | **📝 版本:** v3.56 | **👨‍💻 维护者:** 二狗子 🐕
+**📅 最后更新:** 2026-06-01 | **📝 版本:** v3.126 | **👨‍💻 维护者:** 二狗子 🐕
 
 Made with ❤️ for the AI Community
 

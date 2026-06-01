@@ -2366,3 +2366,94 @@ scenarios = {
 > "NVIDIA Nemotron 3 Nano Omni 的核心价值是'让全模态 Agent 跑在端侧'。30B 参数、Hybrid MoE 架构、统一多模态理解，这些都是为了解决一个问题——在不依赖云端的情况下，实现实时多模态推理。2026 年我认为会看到两极分化：云端用 Qwen3.5-Omni 这样的大模型追求最强性能；端侧用 Nemotron 这样的模型追求实时性和隐私。对于 AI 应用开发工程师，理解这个趋势很重要——不是所有东西都要上云，端侧全模态打开了新的产品可能性，比如离线语音助手、本地视觉 Agent、私密对话机器人。"
 
 </details>
+
+### Q20: Gemini 3.5 Flash 是什么？为什么它是2026年Google I/O最重要的发布之一？
+
+<details>
+<summary>💡 答案要点</summary>
+
+**背景：2026年5月19日 Google I/O 大会**
+
+Google 在 I/O 2026 发布了 Gemini 3.5 Flash，这是 Gemini Flash 系列首次搭载完整的 agentic 行动能力，被官方定位为"frontier intelligence + native agentic action"的结合体。
+
+---
+
+**Gemini 3.5 Flash 核心突破：**
+
+| 维度 | 详情 |
+|------|------|
+| **定位** | 首个结合前沿智能 + 原生 Agentic 行动能力的 Flash 模型 |
+| **速度** | 比同类前沿模型快 4 倍（4x speed of rival frontier models） |
+| **基准** | 在 Coding、Agentic、Multimodal 三个维度超越 Gemini 3.1 Pro |
+| **Agent 能力** | 原生 computer use、tool search、内置 agentic 工作流 |
+| **上下文** | 继承 Gemini 系列超大上下文（1M+ token） |
+
+---
+
+**为什么重要？（面试核心观点）**
+
+**1. Flash 系列的战略转变**
+> 过去 Flash = "轻量、便宜、适合简单任务"
+> 现在 Flash = "frontier-level intelligence + native agentic action"
+> 
+> Google 把原来只有 Ultra/Gemini Pro 才有的 agentic 能力下放到了 Flash，意味着**低成本也能做复杂 Agent 任务**。这对 AI 应用开发的影响巨大——以前要花 $12/M 输入才能跑的 Agent 工作流，现在 $0.1/M 就能跑。
+
+**2. 4x 速度是关键产品优势**
+```python
+# 以前：用 Gemini 3.1 Pro 做 Agent 工作流
+""" 速度慢、成本高，但效果好 """
+cost_per_1k_tokens = 0.00125  # $1.25/M
+latency = "high"  # 因为要多次 tool calls
+
+# 现在：用 Gemini 3.5 Flash 做 Agent 工作流
+""" 速度 4x，成本同档，但 agentic 能力更强 """
+cost_per_1k_tokens = 0.000125  # $0.125/M（估算）
+latency = "low"  # 4x 加速
+agentic_capability = "built-in"  # 原生支持
+```
+
+4x 加速对实时 Agent 场景（客服机器人、自动驾驶指令、实时助手）意义重大——延迟从"感知明显"变成"无感"。
+
+
+**3. Google 的 Agent 战略布局**
+```
+Google I/O 2026 Agent 全家桶：
+  Gemini 3.5 Flash → 高速 Agent 主力（价格敏感场景）
+  Google Flow → Agent 构建平台（无代码/低代码）
+  Android XR Glasses → Agent 硬件载体（语音 + 视觉 + 空间计算）
+  Gemini Live → 实时对话 Agent（手机端）
+```
+这是 Google 第一次把 Agent 能力当成 I/O 的核心卖点，对标的不再是 ChatGPT，而是 OpenAI 的 Agent 产品线。
+
+---
+
+**与竞争产品的对比：**
+
+| 模型 | Agentic 能力 | 速度 | 价格 | 上下文 |
+|------|-------------|------|------|--------|
+| **Gemini 3.5 Flash** | ✅ 原生 | ⭐⭐⭐⭐⭐ 4x | 低 | 1M+ |
+| GPT-5.4 | ✅ 强 | ⭐⭐⭐⭐ | 高 | 1M |
+| Claude Sonnet 4.6 | ✅ 强 | ⭐⭐⭐⭐ | 中 | 200K |
+| Gemini 3.1 Pro | ✅ 有 | ⭐⭐⭐ | 中 | 1M |
+
+
+---
+
+
+**面试话术：**
+> "Gemini 3.5 Flash 的发布对 AI 应用开发工程师意味着什么？三点：①成本重构——以前 Agent 工作流必须用 GPT-4o 级别的模型，现在 Gemini 3.5 Flash 4x 加速 + 低成本就能实现，创业公司和个人开发者也能做复杂 Agent 应用；②速度即产品——4x 加速让实时 Agent 从不可能变成可能，比如语音助手、实时客服、自动驾驶指令这类对延迟敏感的场景；③Flash 系列不再'low-end'——Google 把 Flash 从'轻量替代品'升级成'frontier 级别能力下放'，这预示了 2026 年模型层的重要趋势：'好模型 + 低成本 + 原生 Agent 能力'会成为标配。"
+
+</details>
+
+*版本: v3.126 | 更新: 2026-06-01 | by 二狗子 🐕*
+
+---
+
+## 📚 数据更新（v3.126 - 2026-06-01）
+
+
+| 序号 | 模块 | 新增内容 | 高频度 | 题数 |
+|------|------|----------|--------|------|
+| 🆕 | [🎨 多模态应用（新增Q20）](docs/11-multimodal-ai/) | Q20 Gemini 3.5 Flash（Google I/O 2026）：首个结合前沿智能+原生Agentic能力的Flash模型、4x速度超越Gemini 3.1 Pro、Coding/Agentic/Multimodal三维度基准测试、Google Agent全家桶布局 | 🔥🔥🔥🔥🔥 | +1 |
+
+*版本: v3.126 | 更新: 2026-06-01 | by 二狗子 🐕*
